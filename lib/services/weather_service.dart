@@ -12,11 +12,21 @@ final String apiKey;
 WeatherService(this.apiKey);
 
 Future<Weather> getWeather(String cityName) async{
- final response = await http.get(Uri.parse('$BASE_URL?q=$cityName&appid=$apiKey&units=metric'));
-
+    LocationPermission permission = await Geolocator.checkPermission();
+  if (permission==LocationPermission.denied) {
+    permission = await  Geolocator.requestPermission(); 
+  }
+  Position position = await Geolocator.getCurrentPosition(
+    desiredAccuracy: LocationAccuracy.high);
+    double lat =  position.latitude;
+    double lon =  position.longitude;
+ http.Response response = await http.get(Uri.parse('https://api.openweathermap.org/data/2.5/forecast?lat=$lat&lon=$lon&appid=d4c4a2f974a7f568db852a7f344a9b65&units=metric'));
+print('siuuuuuuS');
  if(response.statusCode==200){
+  print('yes');
   return Weather.fromJson(jsonDecode(response.body));
  }else{
+  print('Failed to Load');
   throw Exception('Failed to Load');
  }
 }
@@ -32,9 +42,7 @@ Future<String> getCurrentCity()async {
 
     List<Placemark> placemarks = 
     await placemarkFromCoordinates(position.latitude, position.longitude);
-
     String? city = placemarks[0].locality;
-
     return city ?? "";
 }
 
