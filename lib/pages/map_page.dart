@@ -3,20 +3,26 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
-const MAPBOX_ACCESS_TOKEN ='pk.eyJ1IjoianVhbmNhc3RpbGxvMjQiLCJhIjoiY2xvczcxenNlMHc5dDJqcXFvMW13NXgxaCJ9.5__6OzqJddXio1-HpU-XFw';
-//final myPosition = LatLng(20.517710, -100.804878); 
+const MAPBOX_ACCESS_TOKEN =
+    'pk.eyJ1IjoianVhbmNhc3RpbGxvMjQiLCJhIjoiY2xvczcxenNlMHc5dDJqcXFvMW13NXgxaCJ9.5__6OzqJddXio1-HpU-XFw';
+
 class mapPage extends StatefulWidget {
   const mapPage({super.key});
 
   @override
   State<mapPage> createState() => _mapPageState();
-  
 }
 
-
-
 class _mapPageState extends State<mapPage> {
-   LatLng? myPosition;
+  LatLng? myPosition;
+  String currentMapStyle = 'mapbox/streets-v12';
+  List<Marker> markers = [];
+
+  void _changeMapStyle(String mapStyle) {
+    setState(() {
+      currentMapStyle = mapStyle;
+    });
+  }
 
   Future<Position> determinePosition() async {
     LocationPermission permission;
@@ -42,10 +48,8 @@ class _mapPageState extends State<mapPage> {
   void initState() {
     try {
       getCurrentLocation();
-    } catch (e) {
-      
-    }
-    
+    } catch (e) {}
+
     super.initState();
   }
 
@@ -69,7 +73,6 @@ class _mapPageState extends State<mapPage> {
           ],
         ),
         actions: <Widget>[
-          //boton para favs
           ElevatedButton(
             onPressed: () {
               // Navigator.push(
@@ -88,32 +91,96 @@ class _mapPageState extends State<mapPage> {
             )
           : FlutterMap(
               options: MapOptions(
-                initialCenter: myPosition!,
+                center: myPosition!,
                 minZoom: 5,
                 maxZoom: 25,
-                initialZoom: 18,
+                zoom: 18,
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}',
-                  additionalOptions: const {
+                  urlTemplate:
+                      'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}',
+                  additionalOptions: {
                     'accessToken': MAPBOX_ACCESS_TOKEN,
-                    'id': 'mapbox/streets-v12',
+                    'id': currentMapStyle,
                   },
-                ),
-                MarkerLayer(markers:[
-                Marker(point: myPosition!, 
-                child: Icon(
-                  Icons.person_pin_circle,
-                  color: Colors.red,
-                  size: 40,
                 )
+                ,
+                MarkerLayer(
+                  markers: markers,
                 ),
-                ]
-                )
               ],
             ),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: () {
+              // Mostrar opciones de cambio de estilo de mapa aquí
+              showModalBottomSheet(
+                context: context,
+                builder: (BuildContext context) {
+                  return Container(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            _changeMapStyle('mapbox/streets-v12');
+                            Navigator.pop(context);
+                          },
+                          child: Text('Normal'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            _changeMapStyle('mapbox/outdoors-v12');
+                            Navigator.pop(context);
+                          },
+                          child: Text('Terreno'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            _changeMapStyle('mapbox/navigation-night-v1');
+                            Navigator.pop(context);
+                          },
+                          child: Text('Hibrida'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            _changeMapStyle('mapbox/satellite-v9');
+                            Navigator.pop(context);
+                          },
+                          child: Text('Satelital'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+            child: Icon(Icons.layers),
+          ),
+          SizedBox(height: 16.0),
+          FloatingActionButton(
+            onPressed: () {
+              // Agregar marcador en la ubicación actual
+              setState(() {
+                markers.add(Marker(
+                  point: myPosition!,
+                  child: Icon(
+                    Icons.location_on,
+                    color: Colors.blue,
+                    size: 40,
+                  ),
+                ));
+              });
+            },
+            child: Icon(Icons.add_location),
+          ),
+        ],
+      ),
     );
   }
 }
-
