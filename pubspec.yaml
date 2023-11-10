@@ -9,9 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_map: ^6.0.1
   geocoding: ^2.1.1
   geolocator: ^10.1.0
   http: ^1.1.0
+  latlong2: ^0.9.0
   lottie: ^2.7.0
 
 dev_dependencies:

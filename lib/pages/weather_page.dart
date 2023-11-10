@@ -114,7 +114,11 @@ Widget build(BuildContext context) {
           SizedBox(width: 20.0),
         ],
       ),
-    body: Center(
+    body: _weather?.cityName == null
+          ? Center(
+              child: CircularProgressIndicator(),
+            )
+          :Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
