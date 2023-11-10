@@ -17,6 +17,7 @@ class _mapPageState extends State<mapPage> {
   LatLng? myPosition;
   String currentMapStyle = 'mapbox/streets-v12';
   List<Marker> markers = [];
+  final mapController = MapController();
 
   void _changeMapStyle(String mapStyle) {
     setState(() {
@@ -72,18 +73,6 @@ class _mapPageState extends State<mapPage> {
             ),
           ],
         ),
-        actions: <Widget>[
-          ElevatedButton(
-            onPressed: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(builder: (context) => mapPage()),
-              // );
-            },
-            child: const Text('Lista de ubicaciones Guardadas'),
-          ),
-          SizedBox(width: 20.0),
-        ],
       ),
       body: myPosition == null
           ? Center(
@@ -91,11 +80,26 @@ class _mapPageState extends State<mapPage> {
             )
           : FlutterMap(
               options: MapOptions(
-                center: myPosition!,
-                minZoom: 5,
-                maxZoom: 25,
-                zoom: 18,
-              ),
+          center: myPosition,
+          zoom: 13.0,
+          onTap: (point, latLng) {
+            setState(() {
+              print(latLng);
+              markers.add(
+                Marker(
+                  width: 80.0,
+                  height: 80.0,
+                  point: latLng,
+                  child:Icon(
+                      Icons.location_pin,
+                      color: Colors.red,
+                      size: 40.0,
+                    ),
+                ),
+              );
+            });
+          },
+        ),
               children: [
                 TileLayer(
                   urlTemplate:
@@ -174,10 +178,11 @@ class _mapPageState extends State<mapPage> {
                     color: Colors.blue,
                     size: 40,
                   ),
-                ));
+                )
+                );
               });
             },
-            child: Icon(Icons.add_location),
+            child: Icon(Icons.gps_fixed),
           ),
         ],
       ),
