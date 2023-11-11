@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:weatherinfo/models/weather_model_RealTime.dart';
+import 'package:weatherinfo/pages/map_page.dart';
 import 'package:weatherinfo/pages/weather_detail_page.dart';
 import 'package:weatherinfo/services/weather_service_RealTime.dart';
 
@@ -12,6 +14,7 @@ class MyMapPage extends StatefulWidget {
 }
 
 class _MyMapPageState extends State<MyMapPage> {
+  LatLng? myPosition;
   List<Map<String, dynamic>> markersData = [];
   bool error = false;
   final _weatherServiceRA =
@@ -62,9 +65,30 @@ class _MyMapPageState extends State<MyMapPage> {
     }
   }
 
+  Future<Position> determinePosition() async {
+    LocationPermission permission;
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return Future.error('error');
+      }
+    }
+    return await Geolocator.getCurrentPosition();
+  }
+
+  void getCurrentLocation() async {
+    Position position = await determinePosition();
+    setState(() {
+      myPosition = LatLng(position.latitude, position.longitude);
+      print(myPosition);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
+    getCurrentLocation();
     _loadMarkersData();
   }
 
@@ -90,54 +114,90 @@ class _MyMapPageState extends State<MyMapPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: Text('Lista de Marcadores'),
-          backgroundColor: Colors.transparent,
-          leading: Row(children: <Widget>[
+        title: Text('Lista de Marcadores'),
+        backgroundColor: Colors.transparent,
+        leading: Row(
+          children: <Widget>[
             const SizedBox(width: 5.0),
             IconButton(
               color: Colors.white,
               icon: const Icon(Icons.arrow_back),
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => mapPage(),
+                  ),
+                );
               },
             ),
-          ]),
-          actions: <Widget>[]),
+          ],
+        ),
+        actions: <Widget>[],
+      ),
       body: ListView.separated(
         itemCount: markersData.length,
         separatorBuilder: (context, index) {
           return Divider(
-            color: Colors.red, // Color de la raya roja
-            thickness: 1.0, // Grosor de la raya
+            color: Colors.red,
+            thickness: 1.0,
           );
         },
         itemBuilder: (context, index) {
           var marker = markersData[index];
           LatLng latLng = LatLng(marker['lat'], marker['lng']);
           String markerName = marker['name'];
-          _fetchWeather(latLng, index);
 
-          String icon = getWeatherAnimation(_weatherData[index]?.mainCondition);
-          return ListTile(
-            title: Text(markerName),
-            subtitle: Text(
-                'Latitud: ${_weatherData[index]?.temperature.round() ?? 'Cargando...'}°C'),
-            leading: CircleAvatar(
-              backgroundColor: Colors.transparent,
-              backgroundImage: AssetImage(icon), // Reemplaza con tu icono
-            ),
-            onTap: () {
-              // Aquí puedes manejar la acción cuando se presiona un elemento
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => WeatherDetailPage(latLng: latLng),
-                ),
-              );
-            },
-          );
+          if (latLng != myPosition) {
+            _fetchWeather(latLng, index);
+
+            String icon =
+                getWeatherAnimation(_weatherData[index]?.mainCondition);
+            return ListTile(
+              title: Text(markerName),
+              subtitle: Text(
+                'Latitud: ${_weatherData[index]?.temperature.round() ?? 'Cargando...'}°C',
+              ),
+              leading: CircleAvatar(
+                backgroundColor: Colors.transparent,
+                backgroundImage: AssetImage(icon),
+              ),
+              trailing: IconButton(
+                icon: Icon(Icons.delete),
+                onPressed: () {
+                  _deleteMarker(index);
+                },
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => WeatherDetailPage(latLng: latLng),
+                  ),
+                );
+              },
+            );
+          } else {}
+          return null;
         },
       ),
     );
+  }
+
+  void _deleteMarker(int index) async {
+    Database database = await openDatabase(
+      join(await getDatabasesPath(), 'markers_database.db'),
+      version: 1,
+    );
+
+    await database.delete(
+      'markers',
+      where: 'id = ?',
+      whereArgs: [markersData[index]['id']],
+    );
+
+    await database.close();
+
+    _loadMarkersData();
   }
 }

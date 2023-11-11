@@ -5,6 +5,8 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:weatherinfo/pages/list_page.dart';
+import 'package:weatherinfo/pages/weather_page.dart';
+import 'package:weatherinfo/services/weather_service.dart';
 import 'package:weatherinfo/services/weather_service_RealTime.dart';
 import 'package:weatherinfo/models/weather_model_RealTime.dart';
 import 'package:sqflite/sqflite.dart';
@@ -22,6 +24,7 @@ class mapPage extends StatefulWidget {
 }
 
 class _mapPageState extends State<mapPage> {
+  final _weatherService = WeatherService('d4c4a2f974a7f568db852a7f344a9b65');
   bool error = false;
   final _weatherServiceRA =
       WeatherServiceRA('d4c4a2f974a7f568db852a7f344a9b65');
@@ -112,6 +115,18 @@ class _mapPageState extends State<mapPage> {
   }
 
   Future<void> loadMarkersFromDatabase() async {
+    Database database1 = await openDatabase(
+      join(await getDatabasesPath(), 'markers_database.db'),
+      onCreate: (db, version) {
+        return db.execute(
+          'CREATE TABLE markers(id INTEGER PRIMARY KEY, lat DOUBLE, lng DOUBLE, name TEXT)',
+        );
+      },
+      version: 1,
+    );
+
+    await database1.close();
+
     Database database = await openDatabase(
       join(await getDatabasesPath(), 'markers_database.db'),
       version: 1,
@@ -119,28 +134,42 @@ class _mapPageState extends State<mapPage> {
 
     List<Map<String, dynamic>> markersFromDatabase =
         await database.query('markers');
-
-    for (var markerData in markersFromDatabase) {
-      LatLng latLng = LatLng(markerData['lat'], markerData['lng']);
-      String markerName = markerData['name'];
-
-      markers.add(
-        Marker(
-          width: 80.0,
-          height: 80.0,
-          point: latLng,
-          child: Column(
-            children: [
-              // Personaliza el contenido del marcador según tus necesidades
-              Icon(Icons.location_on, color: Colors.blue, size: 40),
-              Text(markerName),
-            ],
+    if (markersFromDatabase.isNotEmpty) {
+      for (var markerData in markersFromDatabase) {
+        LatLng latLng = LatLng(markerData['lat'], markerData['lng']);
+        String markerName = markerData['name'];
+        String cityName = await _weatherServiceRA.getCurrentCity(latLng);
+        final weatherRA = await _weatherServiceRA.getWeatherRA(cityName);
+        String icon1 = getWeatherAnimation(weatherRA.mainCondition);
+        markers.add(
+          Marker(
+            width: 80.0,
+            height: 80.0,
+            point: latLng,
+            child: Column(
+              children: [
+                // Personaliza el contenido del marcador según tus necesidades
+                Image.asset(
+                  icon1,
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.cover,
+                ),
+                Text(
+                  '${weatherRA.temperature.round()}°C',
+                  style: TextStyle(
+                    fontSize: 12, // Tamaño de fuente deseado
+                    // Otros estilos de texto si es necesario
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-    }
+        );
+      }
 
-    await database.close();
+      await database.close();
+    } else {}
   }
 
   @override
@@ -156,7 +185,12 @@ class _mapPageState extends State<mapPage> {
             color: Colors.white,
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => WeatherPage(),
+                ),
+              );
             },
           ),
         ]),
@@ -286,18 +320,28 @@ class _mapPageState extends State<mapPage> {
           ),
           const SizedBox(height: 16.0),
           FloatingActionButton(
-            onPressed: () {
-              // Agregar marcador en la ubicación actual
-              setState(() {
-                markers.add(Marker(
-                  point: myPosition!,
-                  child: const Icon(
-                    Icons.location_on,
-                    color: Colors.blue,
-                    size: 40,
-                  ),
-                ));
-              });
+            onPressed: () async {
+              Database database1 = await openDatabase(
+                join(await getDatabasesPath(), 'markers_database.db'),
+                onCreate: (db, version) {
+                  return db.execute(
+                    'CREATE TABLE markers(id INTEGER PRIMARY KEY, lat DOUBLE, lng DOUBLE, name TEXT)',
+                  );
+                },
+                version: 1,
+              );
+              Position position = await determinePosition();
+              await database1.insert(
+                'markers',
+                {
+                  'lat': position.latitude,
+                  'lng': position.longitude,
+                  'name': 'My ubication',
+                },
+                conflictAlgorithm: ConflictAlgorithm
+                    .replace, // Reemplaza el marcador si ya existe
+              );
+              await database1.close();
             },
             child: const Icon(Icons.gps_fixed),
           ),
