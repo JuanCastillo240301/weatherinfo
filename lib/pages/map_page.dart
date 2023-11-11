@@ -105,9 +105,42 @@ class _mapPageState extends State<mapPage> {
   void initState() {
     try {
       getCurrentLocation();
+      loadMarkersFromDatabase();
     } catch (e) {}
 
     super.initState();
+  }
+
+  Future<void> loadMarkersFromDatabase() async {
+    Database database = await openDatabase(
+      join(await getDatabasesPath(), 'markers_database.db'),
+      version: 1,
+    );
+
+    List<Map<String, dynamic>> markersFromDatabase =
+        await database.query('markers');
+
+    for (var markerData in markersFromDatabase) {
+      LatLng latLng = LatLng(markerData['lat'], markerData['lng']);
+      String markerName = markerData['name'];
+
+      markers.add(
+        Marker(
+          width: 80.0,
+          height: 80.0,
+          point: latLng,
+          child: Column(
+            children: [
+              // Personaliza el contenido del marcador según tus necesidades
+              Icon(Icons.location_on, color: Colors.blue, size: 40),
+              Text(markerName),
+            ],
+          ),
+        ),
+      );
+    }
+
+    await database.close();
   }
 
   @override
