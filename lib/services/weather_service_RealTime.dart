@@ -4,24 +4,32 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 
 import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 import 'package:weatherinfo/models/weather_model_RealTime.dart';
+
 class WeatherServiceRA {
-  
-static const BASE_URL = 'https://api.openweathermap.org/data/2.5/weather';
-final String apiKey;
+  static const BASE_URL = 'https://api.openweathermap.org/data/2.5/weather';
+  final String apiKey;
 
-WeatherServiceRA(this.apiKey);
+  WeatherServiceRA(this.apiKey);
 
-Future<WeatherRA> getWeatherRA(String cityName) async{
- http.Response response = await http.get(Uri.parse('https://api.openweathermap.org/data/2.5/weather?q=$cityName&appid=d4c4a2f974a7f568db852a7f344a9b65&units=metric'));
-print('siuuuuuuS');
- if(response.statusCode==200){
-  print('yes');
-  return WeatherRA.fromJson(jsonDecode(response.body));
- }else{
-  print('Failed to Load');
-  throw Exception('Failed to Load');
- }
-}
+  Future<WeatherRA> getWeatherRA(String cityName) async {
+    http.Response response = await http.get(Uri.parse(
+        'https://api.openweathermap.org/data/2.5/weather?q=$cityName&appid=d4c4a2f974a7f568db852a7f344a9b65&units=metric'));
+    print('siuuuuuuS');
+    if (response.statusCode == 200) {
+      print('yes');
+      return WeatherRA.fromJson(jsonDecode(response.body));
+    } else {
+      print('Failed to Load');
+      throw Exception('Failed to Load');
+    }
+  }
 
+  Future<String> getCurrentCity(LatLng latLng) async {
+    List<Placemark> placemarks =
+        await placemarkFromCoordinates(latLng.latitude, latLng.longitude);
+    String? city = placemarks[0].locality;
+    return city ?? "";
+  }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:lottie/lottie.dart';
 import 'package:weatherinfo/models/weather_model.dart';
 import 'package:weatherinfo/models/weather_model_RealTime.dart';
@@ -7,14 +8,16 @@ import 'package:weatherinfo/pages/widget1.dart';
 import 'package:weatherinfo/services/weather_service.dart';
 import 'package:weatherinfo/services/weather_service_RealTime.dart';
 
-class WeatherPage extends StatefulWidget {
-  const WeatherPage({super.key});
+class WeatherDetailPage extends StatefulWidget {
+  final LatLng latLng;
+
+  WeatherDetailPage({super.key, required this.latLng});
 
   @override
-  State<WeatherPage> createState() => _WeatherPageState();
+  State<WeatherDetailPage> createState() => _WeatherDetailPageState();
 }
 
-class _WeatherPageState extends State<WeatherPage> {
+class _WeatherDetailPageState extends State<WeatherDetailPage> {
   final _weatherService = WeatherService('d4c4a2f974a7f568db852a7f344a9b65');
   final _weatherServiceRA =
       WeatherServiceRA('d4c4a2f974a7f568db852a7f344a9b65');
@@ -28,8 +31,8 @@ class _WeatherPageState extends State<WeatherPage> {
   String? result5;
   _fetchWeather() async {
     try {
-      final weather = await _weatherService.getWeather();
-      String cityName = await _weatherService.getCurrentCity();
+      final weather = await _weatherService.getWeatherD(widget.latLng);
+      String cityName = await _weatherServiceRA.getCurrentCity(widget.latLng);
       final weatherRA = await _weatherServiceRA.getWeatherRA(cityName);
       print(weather);
       setState(() {
@@ -94,28 +97,20 @@ class _WeatherPageState extends State<WeatherPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        elevation: 0,
-        title: Text('Weather App'),
-        backgroundColor: Colors.transparent,
-        leading: Row(
-          children: <Widget>[
-            SizedBox(width: 5.0),
-          ],
-        ),
-        actions: <Widget>[
-          //boton para favs
-          SizedBox(width: 20.0),
-          ElevatedButton(
+          elevation: 0,
+          title: Text('Weather App'),
+          backgroundColor: Colors.transparent,
+          leading: Row(children: <Widget>[
+            const SizedBox(width: 5.0),
+            IconButton(
+              color: Colors.white,
+              icon: const Icon(Icons.arrow_back),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => mapPage()),
-                );
+                Navigator.pop(context);
               },
-              child: Text('Ir al mapa')),
-          //SizedBox(width: 20.0),
-        ],
-      ),
+            ),
+          ]),
+          actions: <Widget>[]),
       body: _weather?.cityName == null
           ? Center(
               child: CircularProgressIndicator(),
@@ -133,7 +128,7 @@ class _WeatherPageState extends State<WeatherPage> {
                   ),
                   SizedBox(height: 40),
                   Text(
-                    "Today",
+                    'Today',
                     style: TextStyle(
                       fontSize: 32, // Tamaño de fuente deseado
                       // Otros estilos de texto si es necesario
